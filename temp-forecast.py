@@ -2,13 +2,12 @@ from datetime import datetime
 from math import sqrt
 from typing import Callable, List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from keras import Sequential
 from keras.callbacks import History
 from keras.layers import LSTM, Dense
-from numpy import concatenate
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
 
