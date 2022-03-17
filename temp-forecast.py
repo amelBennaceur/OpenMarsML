@@ -11,6 +11,8 @@ from keras.layers import LSTM, Dense
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
 
+TRAINING_FLAG_COLUMN: str = "training"
+
 
 def plot_timeseries(dataframe: pd.DataFrame):
     plt.figure()
@@ -42,14 +44,21 @@ def pre_process_data(dataframe: pd.DataFrame, period: str) -> Tuple[MinMaxScaler
     return min_max_scaler, merged_dataframe
 
 
-def split_in_train_test(dataframe: pd.DataFrame, train_days: int) -> Tuple[
+def split_in_train_test(dataframe: pd.DataFrame) -> Tuple[
     np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     dataframe.info()
     print(dataframe.head())
 
-    raw_values: np.ndarray = dataframe.values
-    train: np.ndarray = raw_values[:train_days, :]
-    test: np.ndarray = raw_values[train_days:, :]
+    training_mask: pd.Series = dataframe[TRAINING_FLAG_COLUMN] == True
+    training_dataframe: pd.DataFrame = dataframe[training_mask]
+    testing_dataframe: pd.DataFrame = dataframe[~training_mask]
+    testing_dataframe.drop(TRAINING_FLAG_COLUMN, axis=1, inplace=True)
+    training_dataframe.drop(TRAINING_FLAG_COLUMN, axis=1, inplace=True)
+
+    train: np.ndarray = training_dataframe.values
+    test: np.ndarray = testing_dataframe.values
+    print(f"Training shape: {train.shape}")
+    print(f"Testing shape: {test.shape}")
 
     train_x: np.ndarray = train[:, :-1]
     train_y: np.ndarray = train[:, -1]
@@ -103,16 +112,33 @@ def evaluate(model: Sequential, min_max_scaler: MinMaxScaler, test_x: np.ndarray
     return rmse
 
 
+def load_dataset(training_file: str, testing_file: str) -> pd.DataFrame:
+    dataframes: List[pd.DataFrame] = []
+    for data_file in [training_file, testing_file]:
+        parser: Callable = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+        dataframe: pd.DataFrame = pd.read_csv(data_file, parse_dates=['Time'],
+                                              date_parser=parser, index_col=0)
+        print(f"Rows in {data_file}: {len(dataframe)}")
+        dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
+        dataframe.index.name = "Time"
+
+        if data_file == training_file:
+            dataframe[TRAINING_FLAG_COLUMN] = True
+        elif data_file == testing_file:
+            dataframe[TRAINING_FLAG_COLUMN] = False
+
+        dataframes.append(dataframe)
+
+    return pd.concat(dataframes, axis=0)
+
+
 def main():
-    parser: Callable = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
-    dataframe: pd.DataFrame = pd.read_csv('data/insight_openmars_training_time.csv', parse_dates=['Time'],
-                                          date_parser=parser, index_col=0)
-    dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
-    dataframe.index.name = "Time"
+    dataframe: pd.DataFrame = load_dataset('data/insight_openmars_training_time.csv',
+                                           'data/insight_openmars_test_time.csv')
+    print(dataframe[TRAINING_FLAG_COLUMN].value_counts())
     # plot_timeseries(dataframe)
 
     period: str = "D"
-    train_days: int = 365 * 10
     lstm_neurons: int = 50
     output_neurons: int = 1
     loss_function: str = "mae"
@@ -128,7 +154,7 @@ def main():
     train_y: np.ndarray
     test_x: np.ndarray
     test_y: np.ndarray
-    train_x, train_y, test_x, test_y = split_in_train_test(dataframe, train_days)
+    train_x, train_y, test_x, test_y = split_in_train_test(dataframe)
 
     print("train_x.shape", train_x.shape)
     print("train_y.shape", train_y.shape)
