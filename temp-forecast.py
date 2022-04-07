@@ -93,19 +93,17 @@ def start_training(model: Sequential, train_x: np.ndarray, train_y: np.ndarray, 
     plt.show()
 
 
-def evaluate(model: Sequential, min_max_scaler: MinMaxScaler, test_x: np.ndarray, test_y: np.ndarray) -> float:
-    predictions: np.ndarray = model.predict(test_x)
-    print("predictions.shape", predictions.shape)
-    test_x: np.ndarray = test_x.reshape((test_x.shape[0], test_x.shape[2]))
+def evaluate(model: Sequential, min_max_scaler: MinMaxScaler, features: np.ndarray, labels: np.ndarray) -> float:
+    predictions: np.ndarray = model.predict(features)
+    features: np.ndarray = features.reshape((features.shape[0], features.shape[2]))
     target_column_index: int = 1
 
-    print("Before re-scaling: original_data.shape", test_x.shape)
-    test_x[:, target_column_index] = predictions.flatten()
-    original_data: np.ndarray = min_max_scaler.inverse_transform(test_x)
+    features[:, target_column_index] = predictions.flatten()
+    original_data: np.ndarray = min_max_scaler.inverse_transform(features)
     denormalized_predictions: np.ndarray = original_data[:, target_column_index]
 
-    test_x[:, target_column_index] = test_y.flatten()
-    original_data = min_max_scaler.inverse_transform(test_x)
+    features[:, target_column_index] = labels.flatten()
+    original_data = min_max_scaler.inverse_transform(features)
     denormalized_reals: np.ndarray = original_data[:, target_column_index]
 
     rmse: float = sqrt(mean_squared_error(denormalized_reals, denormalized_predictions))
@@ -164,8 +162,11 @@ def main():
     model: Sequential = define_model(train_x, lstm_neurons, output_neurons, loss_function, optimiser)
     start_training(model, train_x, train_y, test_x, test_y, epochs, batch_size)
 
-    rmse: float = evaluate(model, min_max_scaler, test_x, test_y)
-    print("Test RMSE: {}".format(rmse))
+    training_rmse: float = evaluate(model, min_max_scaler, train_x, train_y)
+    print("Training RMSE: {}".format(training_rmse))
+
+    test_rmse: float = evaluate(model, min_max_scaler, test_x, test_y)
+    print("Test RMSE: {}".format(test_rmse))
 
 
 if __name__ == "__main__":
