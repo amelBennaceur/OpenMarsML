@@ -21,13 +21,11 @@ def reporthook(count, block_size, total_size):
     sys.stdout.flush()
 
 # Retrieve the file from URL link in ORDO
-print('hody')
-# urllib.request.urlretrieve("https://s3-eu-west-1.amazonaws.com/pstorage-ou-74982334129/14280608/openmars_my28_ls225_my28_ls245.nc", "data/my24part.nc", reporthook)
+urllib.request.urlretrieve("https://s3-eu-west-1.amazonaws.com/pstorage-ou-74982334129/14280608/openmars_my28_ls225_my28_ls245.nc", "my24part.nc", reporthook)
 #urllib.request.urlretrieve("https://ordo.open.ac.uk/ndownloader/files/14280608", "my28part.nc", reporthook)
 # This is one 30 sol file, of which in total we have 163 stored publicly! On 4MB/s speed downloaded in ~90 seconds
-ds = xr.open_dataset('data/my24part.nc')
+ds = xr.open_dataset('my28part.nc')
 print(ds)
 # Convert the dataset to a pandas dataframe
 df = ds.to_dataframe()
-print(df.sample(20))
-# df.to_pickle('data/mars_4d_data')
+print(df)
