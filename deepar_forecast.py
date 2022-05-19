@@ -1,11 +1,14 @@
 from typing import List
 
+# Evaluation reference: https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
+# Training reference: https://learning.oreilly.com/library/view/advanced-forecasting-with/9781484271506/html/508548_1_En_20_Chapter.xhtml
+
 import matplotlib.pyplot as plt
 import mxnet as mx
 import numpy as np
 import pandas as pd
 from gluonts.dataset.common import ListDataset
-from gluonts.evaluation import make_evaluation_predictions
+from gluonts.evaluation import make_evaluation_predictions, Evaluator
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.model.forecast import Forecast
 from gluonts.model.predictor import Predictor
@@ -64,6 +67,7 @@ def main():
     prediction_length: int = 2 * 12
     context_length: int = prediction_length * 7
     epochs: int = 10
+    # epochs: int = 2
     learning_rate: float = 1e-3
     num_batches_per_epoch: int = 100
     evaluation_samples: int = 100
@@ -83,6 +87,10 @@ def main():
     forecast_list: List[Forecast] = list(forecast_iterator)
     actual_list: List[pd.Series] = list(actual_iterator)
     plot_forecasts(actual_list[0], forecast_list[0], past_length=context_length)
+
+    evaluator: Evaluator = Evaluator(quantiles=[0.5])
+    aggregate_metrics, item_metrics = evaluator(iter(actual_list), iter(forecast_list))
+    print("aggregate_metrics", aggregate_metrics)
 
 
 if __name__ == "__main__":
