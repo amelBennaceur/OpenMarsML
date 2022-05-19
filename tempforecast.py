@@ -23,10 +23,10 @@ TARGET_COLUMN: str = 'Psurf'
 TRAINING_FLAG_COLUMN: str = "training"
 TRAINING_FILE: str = 'data/insight_openmars_training_time.csv'
 TESTING_FILE: str = 'data/insight_openmars_test_time.csv'
-# EPOCHS: int = 50
+EPOCHS: int = 50
 
 
-EPOCHS: int = 3
+# EPOCHS: int = 3
 
 
 def plot_timeseries(dataframe: pd.DataFrame):
@@ -127,7 +127,7 @@ def evaluate_and_predict(model: keras.Sequential, min_max_scaler: MinMaxScaler, 
     features[:, target_column_index] = predictions.flatten()
     original_data: np.ndarray = min_max_scaler.inverse_transform(features.copy())
     if prediction_file:
-        np.savetxt(prediction_file, original_data, delimiter=",")
+        np.savetxt(prediction_file, original_data, delimiter=",", fmt='%1.3f')
         print(f"File {prediction_file} created")
 
     denormalized_predictions: np.ndarray = original_data[:, target_column_index].copy()
@@ -140,16 +140,21 @@ def evaluate_and_predict(model: keras.Sequential, min_max_scaler: MinMaxScaler, 
     return rmse, denormalized_predictions, denormalized_reals
 
 
+def csv_to_dataframe(data_file: str) -> pd.DataFrame:
+    parser: Callable = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+    dataframe: pd.DataFrame = pd.read_csv(data_file, parse_dates=['Time'],
+                                          date_parser=parser, index_col=0)
+    print(f"Rows in {data_file}: {len(dataframe)}")
+    dataframe.drop(EXCLUDED_COLUMNS, axis=1, inplace=True)
+    dataframe.index.name = "Time"
+
+    return dataframe
+
+
 def load_dataset(training_file: str, testing_file: str) -> pd.DataFrame:
     dataframes: List[pd.DataFrame] = []
     for data_file in [training_file, testing_file]:
-        parser: Callable = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
-        dataframe: pd.DataFrame = pd.read_csv(data_file, parse_dates=['Time'],
-                                              date_parser=parser, index_col=0)
-        print(f"Rows in {data_file}: {len(dataframe)}")
-        dataframe.drop(EXCLUDED_COLUMNS, axis=1, inplace=True)
-        dataframe.index.name = "Time"
-
+        dataframe: pd.DataFrame = csv_to_dataframe(data_file)
         if data_file == training_file:
             dataframe[TRAINING_FLAG_COLUMN] = True
         elif data_file == testing_file:
