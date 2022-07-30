@@ -49,7 +49,7 @@ def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: f
     predictor: Predictor = deep_ar_estimator.train(training_dataset)
 
     if save:
-        model_folder: str = "/models/"
+        model_folder: str = "models/"
         predictor.serialize(Path(model_folder))
         print(f"Model saved at {model_folder}")
 
