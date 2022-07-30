@@ -1,8 +1,7 @@
-from datetime import timedelta
 from typing import Dict, List, Tuple
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 from gluonts.dataset.common import ListDataset
 
 
@@ -40,12 +39,14 @@ def get_target(target: pd.Series, start_date: pd.Timestamp, end_date: pd.Timesta
     return target[training_range]
 
 
-def to_list_dataset(target: pd.Series, start_date: pd.Timestamp, end_date: pd.Timestamp,
-                    frequency: str) -> Tuple[pd.Series, ListDataset]:
-    target_series: pd.Series = get_target(target, start_date, end_date)
-    list_dataset: ListDataset = ListDataset([{"target": target_series,
-                                              "start": str(start_date)}], freq=frequency)
-    return target_series, list_dataset
+def to_list_dataset(targets: List[pd.Series], start_date: pd.Timestamp, end_date: pd.Timestamp,
+                    frequency: str) -> Tuple[List, ListDataset]:
+    target_list: List[Dict] = [{"target": get_target(current_target, start_date, end_date),
+                                "start": str(start_date),
+                                "item_id": current_target.name}
+                               for current_target in targets]
+    list_dataset: ListDataset = ListDataset(target_list, freq=frequency)
+    return target_list, list_dataset
 
 
 def plot_time_series(dataframe: pd.DataFrame, column_names: List[str]):

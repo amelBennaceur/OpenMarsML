@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List
 
 # Evaluation reference: https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
@@ -36,7 +37,8 @@ def create_list_dataset(filename: str, frequency: str) -> ListDataset:
 
 
 def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: float, num_batches_per_epoch: int,
-                    prediction_length: int, context_length: int, frequency: str) -> Predictor:
+                    prediction_length: int, context_length: int, frequency: str,
+                    save: bool = True) -> Predictor:
     trainer: Trainer = Trainer(epochs=epochs,
                                learning_rate=learning_rate,
                                num_batches_per_epoch=num_batches_per_epoch)
@@ -45,6 +47,11 @@ def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: f
                                                          freq=frequency,
                                                          trainer=trainer)
     predictor: Predictor = deep_ar_estimator.train(training_dataset)
+
+    if save:
+        model_folder: str = "/models/"
+        predictor.serialize(Path(model_folder))
+        print(f"Model saved at {model_folder}")
 
     return predictor
 
@@ -66,7 +73,7 @@ def main():
 
     prediction_length: int = 2 * 12
     context_length: int = prediction_length * 7
-    epochs: int = 10
+    epochs: int = 100
     # epochs: int = 2
     learning_rate: float = 1e-3
     num_batches_per_epoch: int = 100
