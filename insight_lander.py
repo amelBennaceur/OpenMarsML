@@ -1,8 +1,77 @@
+import time
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
+import optuna
 import pandas as pd
 from gluonts.dataset.common import ListDataset
+from gluonts.evaluation import Evaluator
+from gluonts.model import Predictor, Forecast
+from optuna import Trial, Study
+from optuna.trial import FrozenTrial
+
+from deepar_forecast import train_predictor
+
+
+class DeepARTuningObjective:
+
+    def __init__(self, learning_rate: float, num_batches_per_epoch: int, frequency: str,
+                 metric_type: str, training_dataset: ListDataset):
+        self.training_epochs: int = 10
+        self.learning_rate: float = learning_rate
+        self.num_batches_per_epoch: int = num_batches_per_epoch
+        self.frequency: str = frequency
+        self.metric_type: str = metric_type
+
+        self.training_dataset: ListDataset = training_dataset
+
+    @staticmethod
+    def get_params(trial: Trial) -> dict:
+        return {
+            "context_length": trial.suggest_categorical("context_length",
+                                                        [num_days * 12 for num_days in range(1, 15)]),
+            "batch_size": trial.suggest_categorical("batch_size",
+                                                    [32, 64, 128, 256, 512])
+        }
+
+    def __call__(self, trial: Trial):
+        parameters: dict = self.get_params(trial)
+        entry_split: List[Tuple[dict, pd.DataFrame]] = [self.split_entry(entry, parameters["context_length"])
+                                                        for entry in self.training_dataset]
+        entry_pasts: List[dict] = [entry[0] for entry in entry_split]
+        entry_futures: List[pd.DataFrame] = [entry[1] for entry in entry_split]
+
+        predictor: Predictor = train_predictor(training_dataset=entry_pasts,
+                                               prediction_length=parameters["context_length"],
+                                               context_length=parameters["context_length"],
+                                               epochs=self.training_epochs,
+                                               learning_rate=self.learning_rate,
+                                               num_batches_per_epoch=self.num_batches_per_epoch,
+                                               frequency=self.frequency,
+                                               batch_size=parameters["batch_size"],
+                                               save=False)
+
+        forecast_iterator = predictor.predict(entry_pasts)
+        forecast_list: List[Forecast] = list(forecast_iterator)
+        evaluator = Evaluator(quantiles=[0.1, 0.5, 0.9])
+        aggregate_metrics, item_metrics = evaluator(entry_futures, forecast_list)
+
+        return aggregate_metrics[self.metric_type]
+
+    def split_entry(self, entry: dict, prediction_length=int) -> Tuple[dict, pd.DataFrame]:
+        entry_past: dict = {}
+        for key, value in entry.items():
+            if key == "target":
+                entry_past[key] = value[: -prediction_length]
+            else:
+                entry_past[key] = value
+
+        entry_future: pd.DataFrame = pd.DataFrame(entry["target"], columns=[entry["item_id"]],
+                                                  index=pd.period_range(start=entry["start"],
+                                                                        periods=len(entry["target"]),
+                                                                        freq=self.frequency))
+
+        return entry_past, entry_future[-prediction_length:]
 
 
 def get_dataset() -> pd.DataFrame:
@@ -28,6 +97,27 @@ def get_dataset() -> pd.DataFrame:
     dataset = dataset.interpolate(method="linear", axis=0)
 
     return dataset
+
+
+def optimise_parameters(number_of_trials: int, learning_rate: float, num_batches_per_epoch: int, frequency: str,
+                        metric_type: str, training_dataset: ListDataset) -> FrozenTrial:
+    start_time: float = time.time()
+
+    study: Study = optuna.create_study(direction="minimize")
+    study.optimize(DeepARTuningObjective(learning_rate=learning_rate,
+                                         num_batches_per_epoch=num_batches_per_epoch,
+                                         frequency=frequency,
+                                         metric_type=metric_type,
+                                         training_dataset=training_dataset), n_trials=number_of_trials)
+
+    print(f"Finished {len(study.trials)}")
+
+    trial: FrozenTrial = study.best_trial
+    print(f"Best trial value {trial.value}")
+    print(f"Best trial params: {trial.params}")
+    print(f"Optimization time: {time.time() - start_time} s")
+
+    return trial
 
 
 def extract_time_series(dataframe: pd.DataFrame, column_name: str) -> pd.Series:

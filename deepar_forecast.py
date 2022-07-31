@@ -37,7 +37,7 @@ def create_list_dataset(filename: str, frequency: str) -> ListDataset:
 
 
 def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: float, num_batches_per_epoch: int,
-                    prediction_length: int, context_length: int, frequency: str,
+                    prediction_length: int, context_length: int, frequency: str, batch_size: int,
                     save: bool = True) -> Predictor:
     trainer: Trainer = Trainer(epochs=epochs,
                                learning_rate=learning_rate,
@@ -45,7 +45,8 @@ def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: f
     deep_ar_estimator: DeepAREstimator = DeepAREstimator(prediction_length=prediction_length,
                                                          context_length=context_length,
                                                          freq=frequency,
-                                                         trainer=trainer)
+                                                         trainer=trainer,
+                                                         batch_size=batch_size)
     predictor: Predictor = deep_ar_estimator.train(training_dataset)
 
     if save:
