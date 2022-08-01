@@ -5,6 +5,7 @@ from typing import List
 # Training reference: https://learning.oreilly.com/library/view/advanced-forecasting-with/9781484271506/html/508548_1_En_20_Chapter.xhtml
 
 import matplotlib.pyplot as plt
+import mxnet
 import mxnet as mx
 import numpy as np
 import pandas as pd
@@ -41,7 +42,8 @@ def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: f
                     save: bool = True) -> Predictor:
     trainer: Trainer = Trainer(epochs=epochs,
                                learning_rate=learning_rate,
-                               num_batches_per_epoch=num_batches_per_epoch)
+                               num_batches_per_epoch=num_batches_per_epoch,
+                               ctx=mxnet.context.gpu())
     deep_ar_estimator: DeepAREstimator = DeepAREstimator(prediction_length=prediction_length,
                                                          context_length=context_length,
                                                          freq=frequency,
