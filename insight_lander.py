@@ -31,7 +31,7 @@ class DeepARTuningObjective:
     def get_params(trial: Trial) -> dict:
         return {
             "context_length": trial.suggest_categorical("context_length",
-                                                        [num_days * 12 for num_days in range(1, 15)]),
+                                                        [num_days * 12 for num_days in range(1, 6)]),
             "batch_size": trial.suggest_categorical("batch_size",
                                                     [32, 64, 128, 256, 512])
         }
