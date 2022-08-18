@@ -9,6 +9,7 @@ from gluonts.evaluation import Evaluator
 from gluonts.model import Predictor, Forecast
 from optuna import Trial, Study
 from optuna.trial import FrozenTrial
+from pandas import DatetimeIndex
 
 from deepar_forecast import train_predictor
 
@@ -76,30 +77,34 @@ class DeepARTuningObjective:
         return entry_past, entry_future[-prediction_length:]
 
 
-def get_dataset() -> pd.DataFrame:
+def get_dataset(frequency: str) -> pd.DataFrame:
     dataset: pd.DataFrame = pd.read_csv("data/insight_openmars_withobs.csv", header=0, parse_dates=[0],
-                                        index_col=0, na_values="-9999")
-    column_map: Dict[str, str] = {"Sol": "martian_days",
-                                  "Ls": "solar_longitude",
-                                  "LT": "local_time",
-                                  "Psurf_assim": "assim_surface_pressure",
-                                  "Psurf_obs": "surface_pressure",
-                                  "u_assim": "assim_eastwind_speed",
-                                  "u_obs": "eastward_wind_speed",
-                                  "v_assim": "assim_northwind_speed",
-                                  "v_obs": "northward_wind_speed",
-                                  "dust_assim": "assim_dust_opticaldepth",
-                                  "temp_assim": "assim_air_temperature",
-                                  "temp_obs": "air_temperature"}
+                                        index_col=[0], na_values="-9999")
+    column_map: Dict[str, str] = {
+        "Sol": "martian_days",
+        "Ls": "solar_longitude",
+        "LT": "local_time",
+        "Psurf_assim": "assim_surface_pressure",
+        "Psurf_obs": "surface_pressure",
+        "u_assim": "assim_eastwind_speed",
+        "u_obs": "eastward_wind_speed",
+        "v_assim": "assim_northwind_speed",
+        "v_obs": "northward_wind_speed",
+        "dust_assim": "assim_dust_opticaldepth",
+        "temp_assim": "assim_air_temperature",
+        "temp_obs": "air_temperature"}
 
     dataset = dataset.rename(columns=column_map, errors="raise")
-    dataset.index = dataset.index.rename("observation_time")
 
-    print("Missing values")
+    print("Before interpolation: Missing values")
     print(dataset.isna().sum())
 
-    dataset = dataset.replace(-9999, None)
+    dataset = dataset.resample(frequency).mean()
+    new_index: DatetimeIndex = pd.date_range(start=min(dataset.index),
+                                             end=max(dataset.index),
+                                             freq=frequency)
 
+    dataset = dataset.reindex(new_index).sort_index()
     dataset = dataset.interpolate(method="linear", axis=0)
 
     return dataset
@@ -133,17 +138,21 @@ def extract_time_series(dataframe: pd.DataFrame, column_name: str, index_columns
     return indexed_dataframe[column_name]
 
 
-def get_target(target: pd.Series, start_date: pd.Timestamp, end_date: pd.Timestamp) -> pd.Series:
+def get_target_series(target: pd.Series, start_date: pd.Timestamp, end_date: pd.Timestamp) -> pd.Series:
     training_range = target.index[(target.index > start_date) & (target.index < end_date)]
     return target[training_range]
 
 
 def to_list_dataset(targets: List[pd.Series], start_date: pd.Timestamp, end_date: pd.Timestamp,
                     frequency: str) -> Tuple[List, ListDataset]:
-    target_list: List[Dict] = [{"target": get_target(current_target, start_date, end_date),
-                                "start": str(start_date),
-                                "item_id": current_target.name}
-                               for current_target in targets]
+    target_list: List[Dict] = []
+    for current_target in targets:
+        target_series: pd.Series = get_target_series(current_target, start_date, end_date)
+
+        target_list.append({"target": target_series,
+                            "start": target_series.index[0],
+                            "item_id": current_target.name})
+
     list_dataset: ListDataset = ListDataset(target_list, freq=frequency)
     return target_list, list_dataset
 
