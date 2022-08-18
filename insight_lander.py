@@ -12,6 +12,8 @@ from optuna.trial import FrozenTrial
 
 from deepar_forecast import train_predictor
 
+plt.rcParams.update({'font.size': 10})
+
 
 class DeepARTuningObjective:
 
@@ -77,7 +79,8 @@ class DeepARTuningObjective:
 def get_dataset() -> pd.DataFrame:
     dataset: pd.DataFrame = pd.read_csv("data/insight_openmars_withobs.csv", header=0, parse_dates=[0],
                                         index_col=0, na_values="-9999")
-    column_map: Dict[str, str] = {"Ls": "solar_longitude",
+    column_map: Dict[str, str] = {"Sol": "martian_days",
+                                  "Ls": "solar_longitude",
                                   "LT": "local_time",
                                   "Psurf_assim": "assim_surface_pressure",
                                   "Psurf_obs": "surface_pressure",
@@ -91,6 +94,9 @@ def get_dataset() -> pd.DataFrame:
 
     dataset = dataset.rename(columns=column_map, errors="raise")
     dataset.index = dataset.index.rename("observation_time")
+
+    print("Missing values")
+    print(dataset.isna().sum())
 
     dataset = dataset.replace(-9999, None)
 
@@ -120,8 +126,11 @@ def optimise_parameters(number_of_trials: int, learning_rate: float, num_batches
     return trial
 
 
-def extract_time_series(dataframe: pd.DataFrame, column_name: str) -> pd.Series:
-    return dataframe[column_name]
+def extract_time_series(dataframe: pd.DataFrame, column_name: str, index_columns: List[str]) -> pd.Series:
+    indexed_dataframe: pd.DataFrame = dataframe
+    if len(index_columns) > 0:
+        indexed_dataframe: pd.DataFrame = dataframe.set_index(index_columns)
+    return indexed_dataframe[column_name]
 
 
 def get_target(target: pd.Series, start_date: pd.Timestamp, end_date: pd.Timestamp) -> pd.Series:
@@ -139,13 +148,13 @@ def to_list_dataset(targets: List[pd.Series], start_date: pd.Timestamp, end_date
     return target_list, list_dataset
 
 
-def plot_time_series(dataframe: pd.DataFrame, column_names: List[str]):
+def plot_time_series(dataframe: pd.DataFrame, column_names: List[str], index_columns: List[str]):
     figures, axis = plt.subplots(nrows=len(column_names), ncols=1, figsize=(20, 20), sharex="all")
     grid = axis.ravel()
     for plot_index in range(0, len(column_names)):
-        time_series: pd.Series = extract_time_series(dataframe, column_names[plot_index])
+        time_series: pd.Series = extract_time_series(dataframe, column_names[plot_index], index_columns)
         time_series.plot(ax=grid[plot_index])
-        grid[plot_index].set_xlabel("Observation_Time")
+        grid[plot_index].set_xlabel("Time")
         grid[plot_index].set_ylabel(time_series.name)
         grid[plot_index].grid(which="minor", axis="x")
 

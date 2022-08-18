@@ -1,8 +1,6 @@
+from itertools import islice
 from pathlib import Path
 from typing import List
-
-# Evaluation reference: https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
-# Training reference: https://learning.oreilly.com/library/view/advanced-forecasting-with/9781484271506/html/508548_1_En_20_Chapter.xhtml
 
 import matplotlib.pyplot as plt
 import mxnet
@@ -15,8 +13,12 @@ from gluonts.model.deepar import DeepAREstimator
 from gluonts.model.forecast import Forecast
 from gluonts.model.predictor import Predictor
 from gluonts.mx.trainer import Trainer
+from matplotlib.axes import Axes
 
 import tempforecast
+
+# Evaluation reference: https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
+# Training reference: https://learning.oreilly.com/library/view/advanced-forecasting-with/9781484271506/html/508548_1_En_20_Chapter.xhtml
 
 SEED: int = 7
 
@@ -59,12 +61,19 @@ def train_predictor(training_dataset: ListDataset, epochs: int, learning_rate: f
     return predictor
 
 
-def plot_forecasts(actual: pd.Series, forecast: Forecast, past_length: int):
-    _ = actual[-past_length:].plot(figsize=(12, 5), linewidth=2)
-    forecast.plot(color='g')
-    plt.grid(which='both')
-    plt.legend(["observations", "median prediction", "90% confidence interval", "50% confidence interval"])
-    plt.show()
+def plot_forecasts(actuals: List[pd.DataFrame], forecasts: List[Forecast], past_length: int, plots: int) -> None:
+    actual: pd.DataFrame
+    forecast: Forecast
+
+    for actual, forecast in islice(zip(actuals, forecasts), plots):
+        actual_as_series: pd.DataFrame = actual[-past_length:]
+        axes: Axes = actual_as_series.plot(figsize=(12, 5), linewidth=2)
+
+        axes.set_title(forecast.item_id)
+        forecast.plot(color='g')
+        plt.grid(which='both')
+        plt.legend(["observations", "median prediction", "90% confidence interval", "50% confidence interval"])
+        plt.show()
 
 
 def main():
