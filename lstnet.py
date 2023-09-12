@@ -367,8 +367,8 @@ dataframe = load_dataset('data/insight_openmars_training_time.csv',
 # data = dataframe.to_numpy()
 # @title
 # args=Arguments(horizon=24,hidCNN=50, hidRNN=50,L1loss=False,data="exchange_rate.txt",save="exchange_rate.pt",output_fun=None)
-args = Arguments(horizon=1, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save="lstnet_model.pt", output_fun=None,
-                 normalize=3, epochs=20)
+args = Arguments(horizon=12, skip = 24, window = 100, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
+                 normalize=3, epochs=10)
 print("args normlaize:", args.normalize)
 Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
 print('Data.rse', Data.rse)
@@ -425,8 +425,8 @@ test_rse, test_rae, test_corr = evaluate(Data, Data.test[0], Data.test[1], model
 print("\n\n\n After end of training.")
 print("test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_rse, test_rae, test_corr))
 
-args = Arguments(horizon=1, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save="lstnet_model.pt", output_fun=None,
-                 normalize=3, epochs=20)
+args = Arguments(horizon=12, skip = 24, window = 100, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
+                 normalize=3, epochs=10)
 Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
 
 with open(args.save, 'rb') as f:
