@@ -16,7 +16,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 
-# @title model
+
 class LSTNet(nn.Module):
     def __init__(self, args, data):
         super(LSTNet, self).__init__()
@@ -86,7 +86,6 @@ class LSTNet(nn.Module):
             res = self.output(res)
         return res
 
-
 # @title
 def normal_std(x):
     return x.std() * np.sqrt((len(x) - 1.) / (len(x)))
@@ -104,9 +103,8 @@ class Data_utility(object):
         self.normalize = normalize
         self.scale = np.ones(self.m)
         self._normalized(normalize)
-        print(self.rawdat.head())
         self._split(int(train * self.n), int((train + valid) * self.n), self.n)
-        print(self.test[0].size(), len(self.test), self.test[1].size())
+        # print(self.test[0].size(), len(self.test), self.test[1].size())
         self.scale = torch.from_numpy(self.scale).float()
         tmp = self.test[1] * self.scale.expand(self.test[1].size(0), self.m)
 
@@ -154,13 +152,19 @@ class Data_utility(object):
         X = torch.zeros((n, self.P, self.m))
         Y = torch.zeros((n, self.m))
         # Y = torch.zeros((n,1))
-        print(X.shape, Y.shape, self.dat.shape)
+        # print('X Y sefl.dat shapes:')
+        # print(X.shape, Y.shape, self.dat.shape)
+        # print('n and idx_set:')
+        # print(n, idx_set)
         for i in range(n):
             end = idx_set[i] - self.h + 1
             start = end - self.P
             X[i, :, :] = torch.from_numpy(self.dat[start:end, :])
             Y[i, :] = torch.from_numpy(self.dat[idx_set[i], :])
             # Y[i] = torch.from_numpy(np.asarray(self.dat[idx_set[i],1]))
+            # print('start, end ', start, end)
+            # print('i, ind_set[i]', i, idx_set[i])
+            # print(' X[i].shape, y[i].shape', X[i].shape, Y[i].shape)
         return [X, Y]
 
     def get_batches(self, inputs, targets, batch_size, shuffle=True):
@@ -191,6 +195,8 @@ def evaluate2(data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     test = None
 
     for X, Y in data.get_batches(X, Y, batch_size, False):
+        # print(X.shape)
+        # print(X)
         output = model(X)
         if predict is None:
             predict = output
@@ -222,7 +228,7 @@ def evaluate2(data, X, Y, model, evaluateL2, evaluateL1, batch_size):
 class Arguments():
     def __init__(self, data, hidCNN=100, hidRNN=100, window=35, CNN_kernel=6, highway_window=24, clip=10, epochs=5,
                  batch_size=128, dropout=0.2, save="save.pt", optim="adam", lr=0.001, horizon=1, skip=24, hidSkip=5,
-                 L1loss=True, normalize=0, output_fun="sigmoid"):
+                 L1loss=True, normalize=0, output_fun="sigmoid", port = '8050'):
         self.data = data
         self.hidCNN = hidCNN
         self.hidRNN = hidRNN
@@ -241,7 +247,9 @@ class Arguments():
         self.save = save
         self.output_fun = output_fun
         self.hidSkip = hidSkip
-        self.L1Loss = L1loss
+        self.L1Loss = L1loss,
+        self.port = port
+
 
 
 class Optim(object):
@@ -305,18 +313,18 @@ def load_dataset(training_file, testing_file):
     return pd.concat(dataframes, axis=0)
 
 
-dataframe = load_dataset('data/insight_openmars_training_time.csv',
-                         'data/insight_openmars_test_time.csv')
+dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
+                         'data/data_files/insight_openmars_test_time.csv')
 
-args = Arguments(horizon=1, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save="lstnet_model.pt", output_fun=None,
-                 normalize=3, epochs=5)
-
+args = Arguments(horizon=12, skip = 24, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'model_files/LSTNET/lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
+                 normalize=3, epochs=10, port = '8054')
+# args.save = 'model_files/LSTNET/lstnet_model.pt'
+print('Model selected - ', args.save)
 with open(args.save, 'rb') as f:
     model = torch.load(f)
 
 Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
 
-# model = LSTNet(args, Data)
 nParams = sum([p.nelement() for p in model.parameters()])
 
 if args.L1Loss:
@@ -326,7 +334,9 @@ else:
 evaluateL2 = nn.MSELoss(size_average=False)
 evaluateL1 = nn.L1Loss(size_average=False)
 
-best_val = 100  # 1000000;
+# best_val = 100  # 1000000;
+# print(Data.test[0])
+# print(Data.test[1])
 
 test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
                                                           evaluateL1, args.batch_size)
@@ -335,6 +345,8 @@ columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'tem
 test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8856:].index)
 predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8856:].index)
 
+# test_df.to_csv('test_data.csv')
+# predict_df.to_csv('predicted_data.csv')
 
 def multi_plot(test_df, predict_df, title):
     default_column = 'Tsurf'
@@ -415,7 +427,7 @@ def multi_plot(test_df, predict_df, title):
         dcc.Graph(figure=fig)
     ])
 
-    app.run_server(debug=True, use_reloader=False)  # Turn off reloader if inside Jupyter
+    app.run_server(debug=True, use_reloader=False, port = int(args.port))  # Turn off reloader if inside Jupyter
 
-multi_plot(test_df, predict_df, title="Comparing actual and predicted values of 8 variables from OpenMars data")
+multi_plot(test_df, predict_df, title=f"Comparing actual and predicted values of 8 variables from OpenMars data. Model: {args.save}")
 
