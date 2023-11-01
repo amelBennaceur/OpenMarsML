@@ -1,0 +1,23 @@
+/home/ubuntu/OpenMarsML/lstnet_inference.py:16: UserWarning: 
+The dash_core_components package is deprecated. Please replace
+`import dash_core_components as dcc` with `from dash import dcc`
+  import dash_core_components as dcc
+/home/ubuntu/OpenMarsML/lstnet_inference.py:17: UserWarning: 
+The dash_html_components package is deprecated. Please replace
+`import dash_html_components as html` with `from dash import html`
+  import dash_html_components as html
+/home/ubuntu/OpenMarsML/lstnet_inference.py:305: FutureWarning: The argument 'date_parser' is deprecated and will be removed in a future version. Please use 'date_format' instead, or read your data in as 'object' dtype and then call 'to_datetime'.
+  dataframe = pd.read_csv(data_file, parse_dates=['Time'],
+/home/ubuntu/OpenMarsML/lstnet_inference.py:305: FutureWarning: The argument 'date_parser' is deprecated and will be removed in a future version. Please use 'date_format' instead, or read your data in as 'object' dtype and then call 'to_datetime'.
+  dataframe = pd.read_csv(data_file, parse_dates=['Time'],
+/home/ubuntu/miniconda3/envs/OpenMars/lib/python3.11/site-packages/torch/nn/_reduction.py:42: UserWarning: size_average and reduce args will be deprecated, please use reduction='sum' instead.
+  warnings.warn(warning.format(ret))
+Rows in data/data_files/insight_openmars_training_time.csv: 72196
+Rows in data/data_files/insight_openmars_test_time.csv: 16364
+Model selected -  model_files/LSTNET/lstnet_model_hor_12_win_35_skip_12.pt
+Dash is running on http://0.0.0.0:8054/
+
+ * Serving Flask app 'lstnet_inference'
+ * Debug mode: on
+152.37.73.34 - - [12/Oct/2023 11:07:13] code 400, message Bad request version ('\x00\x02\x01\x00ÿ\x01\x00\x01\x00\x00')
+152.37.73.34 - - [12/Oct/2023 11:07:13] code 400, message Bad request version ('\x00\x02\x01\x00\x00')

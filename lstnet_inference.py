@@ -316,7 +316,7 @@ def load_dataset(training_file, testing_file):
 dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
                          'data/data_files/insight_openmars_test_time.csv')
 
-args = Arguments(horizon=12, skip = 24, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'model_files/LSTNET/lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
+args = Arguments(horizon=12, skip = 24, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'model_files/LSTNET/lstnet_model_hor_12_win_35_skip_12.pt', output_fun=None,
                  normalize=3, epochs=10, port = '8054')
 # args.save = 'model_files/LSTNET/lstnet_model.pt'
 print('Model selected - ', args.save)
@@ -427,7 +427,7 @@ def multi_plot(test_df, predict_df, title):
         dcc.Graph(figure=fig)
     ])
 
-    app.run_server(debug=True, use_reloader=False, port = int(args.port))  # Turn off reloader if inside Jupyter
+    app.run_server(debug=True, host = '0.0.0.0',use_reloader=False, port = int(args.port))  # Turn off reloader if inside Jupyter
 
 multi_plot(test_df, predict_df, title=f"Comparing actual and predicted values of 8 variables from OpenMars data. Model: {args.save}")
 
