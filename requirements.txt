@@ -14,7 +14,7 @@ attrs
 ax-platform
 backcall
 beautifulsoup4
-blas
+# blas
 bleach
 botorch
 brotli
