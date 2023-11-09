@@ -273,7 +273,7 @@ def train(data, X, Y, model, criterion, batch_size):
 # @title
 class Arguments():
     def __init__(self, data, hidCNN=100, hidRNN=100, window=35, CNN_kernel=6, highway_window=24, clip=10, epochs=5,
-                 batch_size=128, dropout=0.2, save="save.pt", optim="adam", lr=0.001, horizon=1, skip=24, hidSkip=5,
+                 batch_size=128, dropout=0.2, save="save.pt", optim="adam", lr=0.001, horizon=1, skip=0, hidSkip=1,
                  L1loss=True, normalize=0, output_fun="sigmoid"):
         self.data = data
         self.hidCNN = hidCNN
@@ -290,7 +290,7 @@ class Arguments():
         self.skip = skip
         self.normalize = normalize
         self.horizon = horizon
-        self.save = save
+        self.save = f'./model_files/LSTNET/lstnet_model_hor_{horizon}_win_{window}_skip_{skip}.pt'
         self.output_fun = output_fun
         self.hidSkip = hidSkip
         self.L1Loss = L1loss
@@ -362,13 +362,12 @@ def load_dataset(training_file, testing_file):
     return pd.concat(dataframes, axis=0)
 
 
-dataframe = load_dataset('data/insight_openmars_training_time.csv',
-                         'data/insight_openmars_test_time.csv')
-# data = dataframe.to_numpy()
-# @title
-# args=Arguments(horizon=24,hidCNN=50, hidRNN=50,L1loss=False,data="exchange_rate.txt",save="exchange_rate.pt",output_fun=None)
-args = Arguments(horizon=12, skip = 24, window = 100, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
-                 normalize=3, epochs=10)
+dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
+                         'data/data_files/insight_openmars_test_time.csv')
+
+args = Arguments(horizon=120, skip = 1, window = 5, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
+                 normalize=3, epochs=3)
+print(f'Model save path is {args.save}')
 print("args normlaize:", args.normalize)
 Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
 print('Data.rse', Data.rse)
