@@ -21,7 +21,8 @@ app = dash.Dash(__name__)
 model_names_dropdown_dict = {}
 model_names_dropdown_list = []
 for model_name in predicted_data_dict.keys():
-    model_names_dropdown_list.append({'label': model_name, 'value': model_name})
+    model_name_new = '_'.join(model_name.split('_')[3:])
+    model_names_dropdown_list.append({'label': model_name_new, 'value': model_name})
 
 variables = actual_data.columns.values.tolist()
 variables_dropdown = []
@@ -35,7 +36,7 @@ app.layout = html.Div([
     dcc.Dropdown(
         id='dropdown-model',
         options=model_names_dropdown_list,
-        value=model_names_dropdown_list[0]['label']  # Default selected value
+        value=model_names_dropdown_list[0]['value']  # Default selected value
     ),
     
 
@@ -56,7 +57,6 @@ app.layout = html.Div([
      Input('dropdown-variable', 'value')]
 )
 def update_line_plot(selected_model, selected_variable):
-
     print(f'selected model is {selected_model}, slected variable is {selected_variable}')
     fig = go.Figure()
 
@@ -90,11 +90,11 @@ def update_line_plot(selected_model, selected_variable):
     # else:
     #     # Handle other variables as needed
     #     variable_data = []
-
+    model_short_name = '_'.join(selected_model.split('_')[3:])
    
     # fig.add_trace(go.Scatter(x=[1, 2, 3], y=variable_data, mode='lines+markers', name=f'{selected_model}_{selected_variable}'))
     fig.update_layout(
-    title_text=f'{selected_model} {selected_variable.capitalize()} Plot',
+    title_text=f'{selected_variable.capitalize()} Plot for model - {model_short_name}',
     height=800
 
     )
@@ -103,6 +103,23 @@ def update_line_plot(selected_model, selected_variable):
     #     xaxis_title='Time',
     #     yaxis_title=selected_variable.capitalize(),
     # )
+    fig.update_layout(
+        xaxis=dict(
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=1,
+                         step="day",
+                         stepmode="backward"),
+                    dict(count=1,
+                         step="month",
+                         stepmode="backward"),
+                ])
+            ),
+            rangeslider=dict(
+                visible=True
+            ),
+        )
+    )
 
     return fig
 
