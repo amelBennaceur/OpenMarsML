@@ -15,6 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import os
 
 
 class LSTNet(nn.Module):
@@ -316,34 +317,49 @@ def load_dataset(training_file, testing_file):
 dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
                          'data/data_files/insight_openmars_test_time.csv')
 
-args = Arguments(horizon=12, skip = 24, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'model_files/LSTNET/lstnet_model_hor_12_win_35_skip_12.pt', output_fun=None,
-                 normalize=3, epochs=10, port = '8054')
-# args.save = 'model_files/LSTNET/lstnet_model.pt'
-print('Model selected - ', args.save)
-with open(args.save, 'rb') as f:
-    model = torch.load(f)
+for model_file in os.listdir('./model_files/LSTNET/'):
+    print(model_file)
+    splt_fl_nm = model_file.split('.')[0].split('_')
+    horizon = int(splt_fl_nm[3])
+    window = int(splt_fl_nm[5])
+    if len(splt_fl_nm) > 6:
+        skip = int(splt_fl_nm[-1])
+    else:
+        skip = 1
+    print(f'hor - {horizon}, win  - {window}, skip - {skip}')
 
-Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
+    args = Arguments(horizon=horizon, skip = skip, window = window, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'./model_files/LSTNET/{model_file}', output_fun=None,
+                    normalize=3, epochs=10, port = '8054')
+    # args.save = 'model_files/LSTNET/lstnet_model.pt'
+    print('Model selected - ', args.save)
+    with open(args.save, 'rb') as f:
+        model = torch.load(f)
 
-nParams = sum([p.nelement() for p in model.parameters()])
+    Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
 
-if args.L1Loss:
-    criterion = nn.L1Loss(size_average=False)
-else:
-    criterion = nn.MSELoss(size_average=False)
-evaluateL2 = nn.MSELoss(size_average=False)
-evaluateL1 = nn.L1Loss(size_average=False)
+    nParams = sum([p.nelement() for p in model.parameters()])
 
-# best_val = 100  # 1000000;
-# print(Data.test[0])
-# print(Data.test[1])
+    if args.L1Loss:
+        criterion = nn.L1Loss(size_average=False)
+    else:
+        criterion = nn.MSELoss(size_average=False)
+    evaluateL2 = nn.MSELoss(size_average=False)
+    evaluateL1 = nn.L1Loss(size_average=False)
 
-test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
-                                                          evaluateL1, args.batch_size)
+    # best_val = 100  # 1000000;
+    # print(Data.test[0])
+    # print(Data.test[1])
 
-columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'temp']
-test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8856:].index)
-predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8856:].index)
+    test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
+                                                            evaluateL1, args.batch_size)
+
+    columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'temp']
+    test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8856:].index)
+    predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8856:].index)
+    predicted_file_nm = model_file.split('.')[0]
+    print(f'Going to save predictions of model {model_file} to file ./data/predicted_data/predictions_{predicted_file_nm}.csv')
+    predict_df.to_csv(f'./data/predicted_data/predictions_{predicted_file_nm}.csv')
+
 
 # test_df.to_csv('test_data.csv')
 # predict_df.to_csv('predicted_data.csv')
@@ -429,5 +445,5 @@ def multi_plot(test_df, predict_df, title):
 
     app.run_server(debug=True, host = '0.0.0.0',use_reloader=False, port = int(args.port))  # Turn off reloader if inside Jupyter
 
-multi_plot(test_df, predict_df, title=f"Comparing actual and predicted values of 8 variables from OpenMars data. Model: {args.save}")
+# multi_plot(test_df, predict_df, title=f"Comparing actual and predicted values of 8 variables from OpenMars data. Model: {args.save}")
 
