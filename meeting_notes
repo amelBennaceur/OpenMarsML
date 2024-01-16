@@ -1,0 +1,9 @@
+02/11/2023
+
+James: Need to predict long term trends. If a dust storm  starts, can the ML model take it from there and predict the full storm or will it taper it down.
+
+TODO:
+
+Sagar: Comparative study of different hyperparameters - horizon, window, skip. How it impacts the predictions. 
+Sagar: Add comparison to the dashboard
+Sagar: Add more models to the comparison.
