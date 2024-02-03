@@ -4,3 +4,8 @@
 .idea/modules.xml
 .idea/OpenMarsML.iml
 .idea/vcs.xml
+
+mlruns/*
+mlartifacts/*
+
+*.ckpt

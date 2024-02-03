@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/500593844161597351/a71a547b944542db82368a2cce602bda/artifacts
+end_time: 1706821704159
+entry_point_name: ''
+experiment_id: '500593844161597351'
+lifecycle_stage: active
+run_id: a71a547b944542db82368a2cce602bda
+run_name: RNNModel
+run_uuid: a71a547b944542db82368a2cce602bda
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1706821689536
+status: 3
+tags: []
+user_id: ubuntu

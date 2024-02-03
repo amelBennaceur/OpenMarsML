@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/782153172978821168/fdf5f4ccfb39483f8dc690398c3f6ebd/artifacts
+end_time: 1706795679980
+entry_point_name: ''
+experiment_id: '782153172978821168'
+lifecycle_stage: active
+run_id: fdf5f4ccfb39483f8dc690398c3f6ebd
+run_name: BlockRNNModel
+run_uuid: fdf5f4ccfb39483f8dc690398c3f6ebd
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1706795666188
+status: 4
+tags: []
+user_id: ubuntu

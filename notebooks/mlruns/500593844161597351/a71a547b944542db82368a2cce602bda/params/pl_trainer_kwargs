@@ -1,0 +1,1 @@
+{'gradient_clip_val': 1, 'max_epochs': 50, 'accelerator': 'auto', 'callbacks': [<optuna.integration.pytorch_lightning.PyTorchLightningPruningCallback object at 0x7fa102644650>, <pytorch_lightning.callbacks.early_stopping.EarlyStopping object at 0x7fa0ec4e9410>]}
