@@ -99,6 +99,8 @@ class Data_utility(object):
         self.P = window
         self.h = horizon
         self.rawdat = dataframe
+        print(self.rawdat.head())
+        print(self.rawdat.shape)
         self.dat = np.zeros(self.rawdat.shape)
         self.n, self.m = self.dat.shape
         self.normalize = normalize
@@ -143,6 +145,8 @@ class Data_utility(object):
         train_set = range(self.P + self.h - 1, train)
         valid_set = range(train, valid)
         test_set = range(valid, self.n)
+        print(test_set)
+        
         self.train = self._batchify(train_set, self.h)
         self.valid = self._batchify(valid_set, self.h)
         self.test = self._batchify(test_set, self.h)
@@ -160,6 +164,10 @@ class Data_utility(object):
         for i in range(n):
             end = idx_set[i] - self.h + 1
             start = end - self.P
+            # print(self.dat[start:end, :])
+            # print(type(self.dat[start:end, :]))
+            # self.dat=np.vstack(self.dat).astype(np.float64)
+
             X[i, :, :] = torch.from_numpy(self.dat[start:end, :])
             Y[i, :] = torch.from_numpy(self.dat[idx_set[i], :])
             # Y[i] = torch.from_numpy(np.asarray(self.dat[idx_set[i],1]))
@@ -196,8 +204,7 @@ def evaluate2(data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     test = None
 
     for X, Y in data.get_batches(X, Y, batch_size, False):
-        # print(X.shape)
-        # print(X)
+
         output = model(X)
         if predict is None:
             predict = output
@@ -299,151 +306,87 @@ class Optim(object):
         return grad_norm
 
 
-def load_dataset(training_file, testing_file):
+def load_dataset(training_file, val_file,  testing_file):
     dataframes = []
-    for data_file in [training_file, testing_file]:
+    for data_file in [training_file,val_file,  testing_file]:
         parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
-        dataframe = pd.read_csv(data_file, parse_dates=['Time'],
-                                date_parser=parser, index_col=0)
+        dataframe = pd.read_csv(data_file)
+        print(dataframe.head())
         print(f"Rows in {data_file}: {len(dataframe)}")
-        dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
-        dataframe.index.name = "Time"
+        dataframe.index = dataframe.time
+        dataframe.drop('time', axis=1, inplace=True)
+        print(dataframe.head())
 
         dataframes.append(dataframe)
 
     return pd.concat(dataframes, axis=0)
 
+def load_dataset_2(training_file,  testing_file):
+    dataframes = []
+    for data_file in [training_file,  testing_file]:
+        parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+        dataframe = pd.read_csv(data_file)
+        
+        print(f"Rows in {data_file}: {len(dataframe)}")
+        dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
+        dataframe.index.name = "Time"
+        dataframes.append(dataframe)
 
-dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
-                         'data/data_files/insight_openmars_test_time.csv')
+    return pd.concat(dataframes, axis=0)
 
-for model_file in os.listdir('./model_files/LSTNET/'):
-    print(model_file)
-    splt_fl_nm = model_file.split('.')[0].split('_')
-    horizon = int(splt_fl_nm[3])
-    window = int(splt_fl_nm[5])
-    if len(splt_fl_nm) > 6:
-        skip = int(splt_fl_nm[-1])
-    else:
-        skip = 1
-    print(f'hor - {horizon}, win  - {window}, skip - {skip}')
+# data_file = 'data/data_files/full_dataset.csv'
+# parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+# dataframe = pd.read_csv(data_file, parse_dates=['Time'],
+#                                 date_parser=parser, index_col=0)
 
-    args = Arguments(horizon=horizon, skip = skip, window = window, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'./model_files/LSTNET/{model_file}', output_fun=None,
-                    normalize=3, epochs=10, port = '8054')
-    # args.save = 'model_files/LSTNET/lstnet_model.pt'
-    print('Model selected - ', args.save)
-    with open(args.save, 'rb') as f:
-        model = torch.load(f)
+dataframe = load_dataset('data/data_files/train.csv',
+                         'data/data_files/val.csv',
+                         'data/data_files/test.csv')
 
-    Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
+# dataframe  =load_dataset_2('/home/ubuntu/OpenMarsML/data/data_files/insight_openmars_training_time.csv', 
+                        #    '/home/ubuntu/OpenMarsML/data/data_files/insight_openmars_test_time.csv')
 
-    nParams = sum([p.nelement() for p in model.parameters()])
+model_file = '/home/ubuntu/OpenMarsML/model_files/LSTNET/lstnet_model_hor_7_win_35.pt'
+print(model_file)
+splt_fl_nm = model_file.split('.')[0].split('_')
+print(splt_fl_nm)
+horizon = int(splt_fl_nm[4])
+window = int(splt_fl_nm[6])
+if len(splt_fl_nm) > 7:
+    skip = int(splt_fl_nm[-1])
+else:
+    skip = 1
+print(f'hor - {horizon}, win  - {window}, skip - {skip}')
 
-    if args.L1Loss:
-        criterion = nn.L1Loss(size_average=False)
-    else:
-        criterion = nn.MSELoss(size_average=False)
-    evaluateL2 = nn.MSELoss(size_average=False)
-    evaluateL1 = nn.L1Loss(size_average=False)
+args = Arguments(horizon=horizon, skip = skip, window = window, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'{model_file}', output_fun=None,
+                normalize=3, epochs=10, port = '8054')
+# args.save = 'model_files/LSTNET/lstnet_model.pt'
+print('Model selected - ', args.save)
+with open(args.save, 'rb') as f:
+    model = torch.load(f)
 
-    # best_val = 100  # 1000000;
-    # print(Data.test[0])
-    # print(Data.test[1])
+Data = Data_utility(args.data, 0.7, 0.2, args.horizon, args.window, args.normalize)
 
-    test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
-                                                            evaluateL1, args.batch_size)
+nParams = sum([p.nelement() for p in model.parameters()])
 
-    columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'temp']
-    test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8856:].index)
-    predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8856:].index)
-    predicted_file_nm = model_file.split('.')[0]
-    print(f'Going to save predictions of model {model_file} to file ./data/predicted_data/predictions_{predicted_file_nm}.csv')
-    predict_df.to_csv(f'./data/predicted_data/predictions_{predicted_file_nm}.csv')
+if args.L1Loss:
+    criterion = nn.L1Loss(size_average=False)
+else:
+    criterion = nn.MSELoss(size_average=False)
+evaluateL2 = nn.MSELoss(size_average=False)
+evaluateL1 = nn.L1Loss(size_average=False)
 
+# best_val = 100  # 1000000;
+# print(Data.test[0])
+# print(Data.test[1])
 
-# test_df.to_csv('test_data.csv')
-# predict_df.to_csv('predicted_data.csv')
+test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
+                                                        evaluateL1, args.batch_size)
 
-def multi_plot(test_df, predict_df, title):
-    default_column = 'Tsurf'
-    all_columns = []
-    fig = go.Figure()
-    for column in test_df.columns.to_list():
-        # add line / trace 1 to figure
-        fig.add_trace(go.Scatter(
-            x=test_df.index,
-            y=test_df[column],
-            marker=dict(
-                color="blue"
-            ),
-            name='Actual',
-            visible=(column == default_column)
-
-        ))
-
-        # add line / trace 2 to figure
-        fig.add_trace(go.Scatter(
-            x=predict_df.index,
-            y=predict_df[column],
-            marker=dict(
-                color="red"
-            ),
-            name='Predicted',
-            visible=(column == default_column)
-        ))
-        all_columns.extend([column] * 2)
-
-    buttons = []
-    for column in test_df.columns.to_list():
-        # create a button object for the column-pair
-        button = dict(label=column,
-                      method="update",
-                      args=[{"visible": [column == c for c in all_columns]}])
-
-        # add the button to our list of buttons
-        buttons.append(button)
-
-    fig.update_layout(showlegend=True,
-                      updatemenus=[{
-                          'active': 0,
-                          'buttons': buttons,
-
-                          'showactive': True
-                          # yaxis_type="log"
-                      }
-                      ]
-                      )
-    # Update remaining layout properties
-    fig.update_layout(
-        title_text=title,
-        height=800
-
-    )
-    fig.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=1,
-                         step="day",
-                         stepmode="backward"),
-                    dict(count=1,
-                         step="month",
-                         stepmode="backward"),
-                ])
-            ),
-            rangeslider=dict(
-                visible=True
-            ),
-        )
-    )
-
-        # fig.show()
-    app = dash.Dash()
-    app.layout = html.Div([
-        dcc.Graph(figure=fig)
-    ])
-
-    app.run_server(debug=True, host = '0.0.0.0',use_reloader=False, port = int(args.port))  # Turn off reloader if inside Jupyter
-
-# multi_plot(test_df, predict_df, title=f"Comparing actual and predicted values of 8 variables from OpenMars data. Model: {args.save}")
+columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'temp']
+test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8857:].index)
+predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8857:].index)
+predicted_file_nm = model_file.split('.')[0]
+print(f'Going to save predictions of model {model_file} to file /home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_best_model.csv')
+predict_df.to_csv(f'/home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_best_model.csv')
 

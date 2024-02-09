@@ -155,6 +155,8 @@ class Data_utility(object):
         for i in range(n):
             end = idx_set[i] - self.h + 1
             start = end - self.P
+            print(self.dat[start:end, :])
+            print(type(self.dat[start:end, :]))
             X[i, :, :] = torch.from_numpy(self.dat[start:end, :])
             Y[i, :] = torch.from_numpy(self.dat[idx_set[i], :])
             # Y[i] = torch.from_numpy(np.asarray(self.dat[idx_set[i],1]))
@@ -342,15 +344,14 @@ class Optim(object):
         return grad_norm
 
 
-def load_dataset(training_file, testing_file):
+def load_dataset(training_file, val_file, testing_file):
     dataframes = []
-    for data_file in [training_file, testing_file]:
-        parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
-        dataframe = pd.read_csv(data_file, parse_dates=['Time'],
-                                date_parser=parser, index_col=0)
+    for data_file in [training_file, val_file, testing_file]:
+        # parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+        dataframe = pd.read_csv(data_file)
         print(f"Rows in {data_file}: {len(dataframe)}")
-        dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
-        dataframe.index.name = "Time"
+        # dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
+        # dataframe.index.name = "Time"
 
         # if data_file == training_file:
         #     dataframe[TRAINING_FLAG_COLUMN] = True
@@ -362,14 +363,18 @@ def load_dataset(training_file, testing_file):
     return pd.concat(dataframes, axis=0)
 
 
-dataframe = load_dataset('data/data_files/insight_openmars_training_time.csv',
-                         'data/data_files/insight_openmars_test_time.csv')
+# dataframe = load_dataset('data/data_files/train.csv',
+#                          'data/data_files/val.csv',
+#                          'data/data_files/test.csv')
 
-args = Arguments(horizon=120, skip = 1, window = 5, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
-                 normalize=3, epochs=3)
+dataframe = pd.read_csv('data/data_files/full_dataset.csv')
+
+
+args = Arguments(horizon=7, skip = 1, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
+                 normalize=3, epochs=10, save=f'lstnet_model_hor_7_win_35_skip_1.pt')
 print(f'Model save path is {args.save}')
 print("args normlaize:", args.normalize)
-Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
+Data = Data_utility(args.data, 0.7, 0.2, args.horizon, args.window, args.normalize)
 print('Data.rse', Data.rse)
 
 model = LSTNet(args, Data)
@@ -424,10 +429,10 @@ test_rse, test_rae, test_corr = evaluate(Data, Data.test[0], Data.test[1], model
 print("\n\n\n After end of training.")
 print("test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_rse, test_rae, test_corr))
 
-args = Arguments(horizon=12, skip = 24, window = 100, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'lstnet_model_hor_12_win_100_skip_24.pt', output_fun=None,
-                 normalize=3, epochs=10)
-Data = Data_utility(args.data, 0.8, 0.1, args.horizon, args.window, args.normalize)
-
+args = Arguments(horizon=7, skip = 1, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
+                 normalize=3, epochs=10, save=f'lstnet_model_hor_7_win_35_skip_1.pt')
+print(f'Model save path is {args.save}')
+Data = Data_utility(args.data, 0.7, 0.2, args.horizon, args.window, args.normalize)
 with open(args.save, 'rb') as f:
     model = torch.load(f)
 test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,

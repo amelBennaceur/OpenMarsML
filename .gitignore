@@ -5,7 +5,11 @@
 .idea/OpenMarsML.iml
 .idea/vcs.xml
 
+optuna/*
 mlruns/*
 mlartifacts/*
-
+*.tar
 *.ckpt
+*.pkl
+*.out
+model_files/*

@@ -306,6 +306,7 @@ def create_transformer_model(trial):
     
     return model
 
+
 # %%
 VAL_LEN = 512
 
@@ -335,7 +336,13 @@ def objective_tcn(trial):
     models[model.model_name] = TCNModel.load_from_checkpoint("TCNModel", best=True)
 
     # Evaluate how good it is on the validation set, using sMAPE
-    preds = model.predict(series=train, n=VAL_LEN)
+    preds = model.historical_forecasts(series=val, 
+                                        past_covariates=None,
+                                        future_covariates=None,
+                                        retrain=False,
+                                        verbose=True, 
+                                        forecast_horizon=model.model_params['output_chunk_length']
+                                        )
     smapes = rmse(val['dust'], preds['dust'], n_jobs=-1, verbose=True)
     # smape_val = np.mean(smapes)
     # smape_val = smapes
@@ -397,7 +404,7 @@ def objective_rnn(trial):
     return smape_val if smape_val != np.nan else float("inf")
 
 
-def objective_nbeats(trial):
+def create_nbeats_model(trial):
     # select input and output chunk lengths
     in_len = trial.suggest_categorical("input_chunk_length", [12, 24, 36, 48, 96])
     out_len =  in_len-1
@@ -406,7 +413,7 @@ def objective_nbeats(trial):
     # Other hyperparameters
 
     num_blocks=trial.suggest_int('num_blocks', 2, 4)
-    num_layers=trial.suggest_int('num_layers', 2, 5),
+    num_layers=trial.suggest_int('num_layers', 2, 5)
     layer_widths=trial.suggest_categorical('layer_widths', [256,512])
     dropout = trial.suggest_categorical("dropout", [0.05, 0.1, 0.15, 0.2, 0.25])
     lr = trial.suggest_float("lr", 5e-5, 1e-3, log=True)
@@ -418,11 +425,7 @@ def objective_nbeats(trial):
     early_stopper = EarlyStopping("val_loss", min_delta=0.0008, patience=2, verbose=False)
     callbacks = [pruner, early_stopper]
 
-    # detect if a GPU is available
-    if torch.cuda.is_available():
-        num_workers = 8
-    else:
-        num_workers = 0
+ 
 
     pl_trainer_kwargs = {
     "gradient_clip_val": 1,
@@ -458,10 +461,16 @@ def objective_nbeats(trial):
         **common_model_args,
 
 )
-    
+    return model
 
+def objective_nbeats(trial):
     series = create_series(dataframe)
-
+    model = create_nbeats_model(trial)
+       # detect if a GPU is available
+    if torch.cuda.is_available():
+        num_workers = 8
+    else:
+        num_workers = 0
     # when validating during training, we can use a slightly longer validation
     # set which also contains the first input_chunk_length time steps
     model_val_set = val
@@ -486,8 +495,6 @@ def objective_nbeats(trial):
 def objective_transformer(trial):
     # select input and output chunk lengths
     model = create_transformer_model(trial)
-    series = create_series(dataframe)
-
     # when validating during training, we can use a slightly longer validation
     # set which also contains the first input_chunk_length time steps
     model_val_set = val
@@ -507,7 +514,14 @@ def objective_transformer(trial):
     models[model.model_name] = TransformerModel.load_from_checkpoint("TransformerModel", best=True)
 
     # Evaluate how good it is on the validation set, using sMAPE
-    preds = model.predict(series=train, n=VAL_LEN)
+    preds = model.historical_forecasts(series=val, 
+                                        past_covariates=None,
+                                        future_covariates=None,
+                                        retrain=False,
+                                        verbose=True, 
+                                        forecast_horizon=model.model_params['output_chunk_length']
+                                        )
+    # preds = model.predict(series=train, n=VAL_LEN)
     smapes = rmse(val['dust'], preds['dust'], n_jobs=-1, verbose=True)
     smape_val = smapes
 
@@ -523,7 +537,8 @@ def evaluate_model(model, test, forecast_horizon):
                                         future_covariates=None,
                                         retrain=False,
                                         verbose=False, 
-                                        forecast_horizon=forecast_horizon
+                                        forecast_horizon=forecast_horizon,
+                                        overlap_end=True
                                         )
     test_dust = test['dust']
     pred_dust = pred_series['dust']
@@ -563,7 +578,6 @@ def logging(model, test, study):
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("Model_Name", model.model_name)
 
-
         # Log the model
         mlflow.log_artifact(f'../model_files/{model.model_name}.pt')
 
@@ -579,6 +593,34 @@ def logging(model, test, study):
         joblib.dump(study, f'../optuna/study_{model.model_name}.pkl')
         mlflow.log_artifact(f'../optuna/study_{model.model_name}.pkl')
 
+
+
+
+def print_callback(study, trial):
+    print(f"Current value: {trial.value}, Current params: {trial.params}")
+    print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
+
+study = optuna.create_study(direction="minimize")
+
+study.optimize(objective_nbeats, n_trials=10, callbacks=[print_callback])
+best_model = create_nbeats_model(study.best_trial)
+best_model = train_model(best_model, val)
+logging(best_model, test, study)
+exit()
+
+def print_callback(study, trial):
+    print(f"Current value: {trial.value}, Current params: {trial.params}")
+    print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
+
+study = optuna.create_study(direction="minimize")
+
+study.optimize(objective_tcn, n_trials=10, callbacks=[print_callback])
+
+# %%
+best_model = create_tcn_model(study.best_trial)
+best_model = train_model(best_model, val)
+logging(best_model, test, study)
+
 # %%
 
 def print_callback(study, trial):
@@ -587,7 +629,7 @@ def print_callback(study, trial):
 
 study = optuna.create_study(direction="minimize")
 
-study.optimize(objective_block_rnn, n_trials=50, callbacks=[print_callback])
+study.optimize(objective_block_rnn, n_trials=10, callbacks=[print_callback])
 
 # %%
 best_model = create_block_rnn_model(study.best_trial)
@@ -604,7 +646,7 @@ def print_callback(study, trial):
 
 study = optuna.create_study(direction="minimize")
 
-study.optimize(objective_rnn, n_trials=50, callbacks=[print_callback])
+study.optimize(objective_rnn, n_trials=10, callbacks=[print_callback])
 
 # %%
 best_model = create_rnn_model(study.best_trial)
@@ -613,28 +655,9 @@ logging(best_model, test, study)
 
 # %%
 
-def print_callback(study, trial):
-    print(f"Current value: {trial.value}, Current params: {trial.params}")
-    print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
 
-study = optuna.create_study(direction="minimize")
 
-study.optimize(objective_tcn, n_trials=50, callbacks=[print_callback])
 
-# %%
-best_model = create_tcn_model(study.best_trial)
-best_model = train_model(best_model, val)
-logging(best_model, test, study)
-
-# %%
-
-# def print_callback(study, trial):
-#     print(f"Current value: {trial.value}, Current params: {trial.params}")
-#     print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
-
-# study = optuna.create_study(direction="minimize")
-
-# study.optimize(objective_nbeats, timeout=1800, callbacks=[print_callback])
 
 # %%
 
@@ -644,7 +667,7 @@ def print_callback(study, trial):
 
 study = optuna.create_study(direction="minimize")
 
-study.optimize(objective_transformer, n_trials=50, callbacks=[print_callback])
+study.optimize(objective_transformer, n_trials=10, callbacks=[print_callback])
 
 # %%
 best_model = create_transformer_model(study.best_trial)
