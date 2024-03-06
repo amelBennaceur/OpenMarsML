@@ -9,7 +9,7 @@ import os
 actual_data = pd.read_csv('./data/test_data.csv', index_col = 0)
 predicted_data_dict = {}
 for predicted_data_file in os.listdir('./data/predicted_data/'):
-    model_name = predicted_data_file.split('.')[0]
+    model_name = predicted_data_file
     predicted_data_dict[model_name] = pd.read_csv(f'./data/predicted_data/{predicted_data_file}', index_col = 0)
 
 print(predicted_data_dict)
@@ -21,8 +21,7 @@ app = dash.Dash(__name__)
 model_names_dropdown_dict = {}
 model_names_dropdown_list = []
 for model_name in predicted_data_dict.keys():
-    model_name_new = '_'.join(model_name.split('_')[3:])
-    model_names_dropdown_list.append({'label': model_name_new, 'value': model_name})
+    model_names_dropdown_list.append({'label': model_name, 'value': model_name})
 
 variables = actual_data.columns.values.tolist()
 variables_dropdown = []
