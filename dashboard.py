@@ -9,7 +9,7 @@ import os
 actual_data = pd.read_csv('./data/test_data.csv', index_col = 0)
 predicted_data_dict = {}
 for predicted_data_file in os.listdir('./data/predicted_data/'):
-    model_name = predicted_data_file
+    model_name = predicted_data_file.split('.')[0]
     predicted_data_dict[model_name] = pd.read_csv(f'./data/predicted_data/{predicted_data_file}', index_col = 0)
 
 print(predicted_data_dict)
@@ -56,7 +56,7 @@ app.layout = html.Div([
      Input('dropdown-variable', 'value')]
 )
 def update_line_plot(selected_model, selected_variable):
-    print(f'selected model is {selected_model}, slected variable is {selected_variable}')
+    print(f'selected model is {selected_model}, selected variable is {selected_variable}')
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
