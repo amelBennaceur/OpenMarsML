@@ -401,7 +401,7 @@ try:
         epoch_start_time = time.time()
         train_loss = train(Data, Data.train[0], Data.train[1], model, criterion, args.batch_size)
         val_loss, val_rae, val_corr = evaluate(Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
-                                               args.batch_size);
+                                               args.batch_size)
         print(
             '| end of epoch {:3d} | time: {:5.2f}s | train_loss {:5.4f} | valid rse {:5.4f} | valid rae {:5.4f} | valid corr  {:5.4f}'.format(
                 epoch, (time.time() - epoch_start_time), train_loss, val_loss, val_rae, val_corr))

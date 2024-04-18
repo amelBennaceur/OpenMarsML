@@ -1,0 +1,16 @@
+artifact_uri: mlflow-artifacts:/717618592824522126/d6af25e1d1cd48ccaace92d40610bf52/artifacts
+deleted_time: 1711630950149
+end_time: 1711630138718
+entry_point_name: ''
+experiment_id: '717618592824522126'
+lifecycle_stage: deleted
+run_id: d6af25e1d1cd48ccaace92d40610bf52
+run_name: NBEATSModel_fixed_input_output_chunk
+run_uuid: d6af25e1d1cd48ccaace92d40610bf52
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1711630123083
+status: 3
+tags: []
+user_id: ubuntu

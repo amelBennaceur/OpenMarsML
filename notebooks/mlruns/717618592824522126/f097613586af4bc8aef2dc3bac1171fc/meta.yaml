@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/717618592824522126/f097613586af4bc8aef2dc3bac1171fc/artifacts
+end_time: 1711634220032
+entry_point_name: ''
+experiment_id: '717618592824522126'
+lifecycle_stage: active
+run_id: f097613586af4bc8aef2dc3bac1171fc
+run_name: TransformerModel_fixed_input_output_chunk
+run_uuid: f097613586af4bc8aef2dc3bac1171fc
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1711634207627
+status: 3
+tags: []
+user_id: ubuntu
