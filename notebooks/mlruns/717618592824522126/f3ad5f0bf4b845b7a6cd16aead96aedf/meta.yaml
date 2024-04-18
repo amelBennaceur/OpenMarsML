@@ -1,0 +1,16 @@
+artifact_uri: mlflow-artifacts:/717618592824522126/f3ad5f0bf4b845b7a6cd16aead96aedf/artifacts
+deleted_time: 1711630949463
+end_time: 1711630751842
+entry_point_name: ''
+experiment_id: '717618592824522126'
+lifecycle_stage: deleted
+run_id: f3ad5f0bf4b845b7a6cd16aead96aedf
+run_name: TCNModel_fixed_input_output_chunk
+run_uuid: f3ad5f0bf4b845b7a6cd16aead96aedf
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1711630740285
+status: 3
+tags: []
+user_id: ubuntu

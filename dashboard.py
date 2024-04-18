@@ -21,8 +21,7 @@ app = dash.Dash(__name__)
 model_names_dropdown_dict = {}
 model_names_dropdown_list = []
 for model_name in predicted_data_dict.keys():
-    model_name_new = '_'.join(model_name.split('_')[3:])
-    model_names_dropdown_list.append({'label': model_name_new, 'value': model_name})
+    model_names_dropdown_list.append({'label': model_name, 'value': model_name})
 
 variables = actual_data.columns.values.tolist()
 variables_dropdown = []
@@ -57,7 +56,7 @@ app.layout = html.Div([
      Input('dropdown-variable', 'value')]
 )
 def update_line_plot(selected_model, selected_variable):
-    print(f'selected model is {selected_model}, slected variable is {selected_variable}')
+    print(f'selected model is {selected_model}, selected variable is {selected_variable}')
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(

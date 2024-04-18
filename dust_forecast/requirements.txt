@@ -1,0 +1,7 @@
+black
+isort
+flake8
+ipykernel
+mypy
+pandas-stubs
+# lightning==2.0.1
