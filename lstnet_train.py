@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 class LSTNet(nn.Module):
     def __init__(self, args, data):
         super(LSTNet, self).__init__()
-        #         self.use_cuda = args.cuda
+        self.use_cuda = True
         self.P = args.window
         self.m = data.m
         self.hidR = args.hidRNN
@@ -25,7 +25,10 @@ class LSTNet(nn.Module):
         self.hidS = args.hidSkip
         self.Ck = args.CNN_kernel
         self.skip = args.skip
-        self.pt = (self.P - self.Ck) // self.skip
+        if self.skip > 0:
+            self.pt = (self.P - self.Ck) // self.skip
+        else:
+            self.pt = self.P - self.Ck
         self.hw = args.highway_window
         self.conv1 = nn.Conv2d(1, self.hidC, kernel_size=(self.Ck, self.m))
         self.GRU1 = nn.GRU(self.hidC, self.hidR)
@@ -92,7 +95,7 @@ def normal_std(x):
 class Data_utility(object):
     # train and valid is the ratio of training set and validation set. test = 1 - train - valid
     def __init__(self, dataframe, train, valid, horizon, window, normalize=0):
-        #         self.cuda = cuda;
+        self.cuda = True
         self.P = window
         self.h = horizon
         self.rawdat = dataframe
@@ -101,9 +104,9 @@ class Data_utility(object):
         self.normalize = normalize
         self.scale = np.ones(self.m)
         self._normalized(normalize)
-        print(self.rawdat.head())
+        # print(self.rawdat.head())
         self._split(int(train * self.n), int((train + valid) * self.n), self.n)
-        print(self.test[0].size(), len(self.test), self.test[1].size())
+        # print(self.test[0].size(), len(self.test), self.test[1].size())
         self.scale = torch.from_numpy(self.scale).float()
         tmp = self.test[1] * self.scale.expand(self.test[1].size(0), self.m)
 
@@ -135,6 +138,7 @@ class Data_utility(object):
                 self.dat[:, i] = self.rawdat[:, i] / np.max(np.abs(self.rawdat[:, i]))
         if (normalize == 3):
             self.dat = self.rawdat.to_numpy()
+            # print('In normalize == 3, type of self.dat[start:end, :] is ', type(self.dat[:, :]))
 
     def _split(self, train, valid, test):
 
@@ -151,12 +155,17 @@ class Data_utility(object):
         X = torch.zeros((n, self.P, self.m))
         Y = torch.zeros((n, self.m))
         # Y = torch.zeros((n,1))
-        print(X.shape, Y.shape, self.dat.shape)
+        # print(X.shape, Y.shape, self.dat.shape)
+        
+        # print(' n is ', n)
         for i in range(n):
             end = idx_set[i] - self.h + 1
             start = end - self.P
-            print(self.dat[start:end, :])
-            print(type(self.dat[start:end, :]))
+            # print(self.dat[start:end, :])
+            # print(type(self.dat[start:end, :]))
+            # print('In batchify, type of self.dat[start:end, :] is ', type(self.dat[0,0]))
+            # print(self.dat[0,0])
+            # print(self.dat)
             X[i, :, :] = torch.from_numpy(self.dat[start:end, :])
             Y[i, :] = torch.from_numpy(self.dat[idx_set[i], :])
             # Y[i] = torch.from_numpy(np.asarray(self.dat[idx_set[i],1]))
@@ -292,7 +301,7 @@ class Arguments():
         self.skip = skip
         self.normalize = normalize
         self.horizon = horizon
-        self.save = f'./model_files/LSTNET/lstnet_model_hor_{horizon}_win_{window}_skip_{skip}.pt'
+        self.save = save
         self.output_fun = output_fun
         self.hidSkip = hidSkip
         self.L1Loss = L1loss
@@ -347,11 +356,13 @@ class Optim(object):
 def load_dataset(training_file, val_file, testing_file):
     dataframes = []
     for data_file in [training_file, val_file, testing_file]:
-        # parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
+        parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
         dataframe = pd.read_csv(data_file)
+        # print(dataframe.head())
+        dataframe['time']  = pd.to_datetime(dataframe['time'])
         print(f"Rows in {data_file}: {len(dataframe)}")
         # dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
-        # dataframe.index.name = "Time"
+        dataframe = dataframe.set_index('time')
 
         # if data_file == training_file:
         #     dataframe[TRAINING_FLAG_COLUMN] = True
@@ -363,15 +374,15 @@ def load_dataset(training_file, val_file, testing_file):
     return pd.concat(dataframes, axis=0)
 
 
-# dataframe = load_dataset('data/data_files/train.csv',
-#                          'data/data_files/val.csv',
-#                          'data/data_files/test.csv')
+dataframe = load_dataset('data/data_files/train.csv',
+                         'data/data_files/val.csv',
+                         'data/data_files/test.csv')
 
-dataframe = pd.read_csv('data/data_files/full_dataset.csv')
+# dataframe = pd.read_csv('data/data_files/full_dataset.csv')
 
 
-args = Arguments(horizon=7, skip = 1, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
-                 normalize=3, epochs=10, save=f'lstnet_model_hor_7_win_35_skip_1.pt')
+args = Arguments(horizon=12, window = 84, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
+                 normalize=3, epochs=10, save=f'LSTNetModel_12_84.pt')
 print(f'Model save path is {args.save}')
 print("args normlaize:", args.normalize)
 Data = Data_utility(args.data, 0.7, 0.2, args.horizon, args.window, args.normalize)
@@ -429,8 +440,8 @@ test_rse, test_rae, test_corr = evaluate(Data, Data.test[0], Data.test[1], model
 print("\n\n\n After end of training.")
 print("test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_rse, test_rae, test_corr))
 
-args = Arguments(horizon=7, skip = 1, window = 35, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
-                 normalize=3, epochs=10, save=f'lstnet_model_hor_7_win_35_skip_1.pt')
+args = Arguments(horizon=12, skip = 0, window = 84, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, output_fun=None,
+                 normalize=3, epochs=10, save=f'LSTNetModel_12_84.pt')
 print(f'Model save path is {args.save}')
 Data = Data_utility(args.data, 0.7, 0.2, args.horizon, args.window, args.normalize)
 with open(args.save, 'rb') as f:

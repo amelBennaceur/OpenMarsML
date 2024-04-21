@@ -29,7 +29,10 @@ class LSTNet(nn.Module):
         self.hidS = args.hidSkip
         self.Ck = args.CNN_kernel
         self.skip = args.skip
-        self.pt = (self.P - self.Ck) // self.skip
+        if self.skip > 0:
+            self.pt = (self.P - self.Ck) // self.skip
+        else:
+            self.pt = self.P - self.Ck
         self.hw = args.highway_window
         self.conv1 = nn.Conv2d(1, self.hidC, kernel_size=(self.Ck, self.m))
         self.GRU1 = nn.GRU(self.hidC, self.hidR)
@@ -323,13 +326,20 @@ def load_dataset(training_file, val_file,  testing_file):
 
 def load_dataset_2(training_file,  testing_file):
     dataframes = []
-    for data_file in [training_file,  testing_file]:
+    for data_file in [training_file, val_file, testing_file]:
         parser = lambda data_string: datetime.strptime(data_string, '%Y-%m-%d %H:%M:%S')
         dataframe = pd.read_csv(data_file)
-        
+        # print(dataframe.head())
+        dataframe['time']  = pd.to_datetime(dataframe['time'])
         print(f"Rows in {data_file}: {len(dataframe)}")
-        dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
-        dataframe.index.name = "Time"
+        # dataframe.drop(['Ls', 'LT', 'CO2ice'], axis=1, inplace=True)
+        dataframe = dataframe.set_index('time')
+
+        # if data_file == training_file:
+        #     dataframe[TRAINING_FLAG_COLUMN] = True
+        # elif data_file == testing_file:
+        #     dataframe[TRAINING_FLAG_COLUMN] = False
+
         dataframes.append(dataframe)
 
     return pd.concat(dataframes, axis=0)
@@ -346,19 +356,10 @@ dataframe = load_dataset('data/data_files/train.csv',
 # dataframe  =load_dataset_2('/home/ubuntu/OpenMarsML/data/data_files/insight_openmars_training_time.csv', 
                         #    '/home/ubuntu/OpenMarsML/data/data_files/insight_openmars_test_time.csv')
 
-model_file = '/home/ubuntu/OpenMarsML/model_files/LSTNET/lstnet_model_hor_7_win_35.pt'
-print(model_file)
-splt_fl_nm = model_file.split('.')[0].split('_')
-print(splt_fl_nm)
-horizon = int(splt_fl_nm[4])
-window = int(splt_fl_nm[6])
-if len(splt_fl_nm) > 7:
-    skip = int(splt_fl_nm[-1])
-else:
-    skip = 1
-print(f'hor - {horizon}, win  - {window}, skip - {skip}')
+model_file = 'LSTNetModel_12_84.pt'
 
-args = Arguments(horizon=horizon, skip = skip, window = window, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'{model_file}', output_fun=None,
+
+args = Arguments(horizon=12, skip = 0, window = 84, hidCNN=30, hidRNN=30, L1loss=False, data=dataframe, save=f'{model_file}', output_fun=None,
                 normalize=3, epochs=10, port = '8054')
 # args.save = 'model_files/LSTNET/lstnet_model.pt'
 print('Model selected - ', args.save)
@@ -387,6 +388,6 @@ columns = ['Tsurf', 'Psurf', 'cloud', 'vapour', 'u_wind', 'v_wind', 'dust', 'tem
 test_df = pd.DataFrame(Ytest, columns=columns, index=dataframe[-8857:].index)
 predict_df = pd.DataFrame(predict, columns=columns, index=dataframe[-8857:].index)
 predicted_file_nm = model_file.split('.')[0]
-print(f'Going to save predictions of model {model_file} to file /home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_best_model.csv')
-predict_df.to_csv(f'/home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_best_model.csv')
+print(f'Going to save predictions of model {model_file} to file /home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_84_12.csv')
+predict_df.to_csv(f'/home/ubuntu/OpenMarsML/data/predicted_data/predictions_lstnet_84_12.csv')
 
