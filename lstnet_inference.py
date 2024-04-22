@@ -102,10 +102,9 @@ class Data_utility(object):
         self.P = window
         self.h = horizon
         self.rawdat = dataframe
-        print(self.rawdat.head())
-        print(self.rawdat.shape)
         self.dat = np.zeros(self.rawdat.shape)
         self.n, self.m = self.dat.shape
+        print(f' P, h, n, m are {self.P}, {self.h}, {self.n}, {self.m}')
         self.normalize = normalize
         self.scale = np.ones(self.m)
         self._normalized(normalize)
@@ -153,12 +152,14 @@ class Data_utility(object):
         self.train = self._batchify(train_set, self.h)
         self.valid = self._batchify(valid_set, self.h)
         self.test = self._batchify(test_set, self.h)
+        print('test after batichuy')
+        print(self.test[0].shape, self.test[1].shape)
 
     def _batchify(self, idx_set, horizon):
 
         n = len(idx_set)
         X = torch.zeros((n, self.P, self.m))
-        Y = torch.zeros((n, self.m))
+        Y = torch.zeros((n, self.h, self.m))
         # Y = torch.zeros((n,1))
         # print('X Y sefl.dat shapes:')
         # print(X.shape, Y.shape, self.dat.shape)
@@ -181,6 +182,7 @@ class Data_utility(object):
 
     def get_batches(self, inputs, targets, batch_size, shuffle=True):
         length = len(inputs)
+        print(f'in get bacthes, len of input is {length}')
         if shuffle:
             index = torch.randperm(length)
         else:
@@ -207,8 +209,9 @@ def evaluate2(data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     test = None
 
     for X, Y in data.get_batches(X, Y, batch_size, False):
-
+        print(f'obtained batches, shapes of X and Y are {X.shape}, {Y.shape}')
         output = model(X)
+        print('forward pass done, shape of output is ', output.shape)
         if predict is None:
             predict = output
             test = Y
@@ -378,8 +381,8 @@ evaluateL2 = nn.MSELoss(size_average=False)
 evaluateL1 = nn.L1Loss(size_average=False)
 
 # best_val = 100  # 1000000;
-# print(Data.test[0])
-# print(Data.test[1])
+print(Data.test[0].shape)
+print(Data.test[1].shape)
 
 test_acc, test_rae, test_corr, predict, Ytest = evaluate2(Data, Data.test[0], Data.test[1], model, evaluateL2,
                                                         evaluateL1, args.batch_size)
