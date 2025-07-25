@@ -1,5 +1,4 @@
-
-.DS_Store
+./*/.DS_Store
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/misc.xml
 .idea/modules.xml
@@ -14,3 +13,5 @@ mlartifacts/*
 *.pkl
 *.out
 model_files/*
+
+.DS_Store
