@@ -1,4 +1,4 @@
-# OpenMarsML: Machine Learning for Martian Weather Prediction
+# OpenMarsML: Weather Prediction on Mars as a Multivariate Time Series Forecasting Problem
 
 This repository contains the implementation of deep learning models for time series forecasting of Martian weather conditions using data from the NASA InSight lander and OpenMARS reanalysis dataset.
 
@@ -195,21 +195,21 @@ The models are evaluated using:
 
 ## Citation
 
-If you use this code in your research, please cite:
+Please cite [To be updated once published]:
 
 ```bibtex
 @article{openmarsml2024,
-  title={Deep Learning for Martian Weather Prediction: A Comparative Study},
-  author={[Your Name]},
-  journal={[Journal Name]},
-  year={2024}
+  title={Weather Prediction on Mars as a Multivariate Time Series Forecasting Problem},
+  author={[Sagar Uprety, Amel Bennaceur, Carlos Gavidia-Calderon, James A. Holmes, Manish R. Patel and Kylash Rajendran]},
+  journal={[To be added]},
+  year={2025}
 }
 ```
 
 ## Contact
 
-For questions or issues, please contact: [Your Email]
+For questions or issues, please contact: [s.uprety@ucl.ac.uk, amel.bennaceur@open.ac.uk]
 
 ## License
 
-[Specify your license here] 
+[MIT License] 
